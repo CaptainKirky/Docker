@@ -1,4 +1,3 @@
-
 import datetime
 from suntime import Sun
 import time
@@ -34,7 +33,11 @@ while True:
     # Get today's sunrise and sunset in Local time
     abd_sr = SUN.get_sunrise_time(now).replace(microsecond=0)
     abd_ss = SUN.get_sunset_time(now).replace(microsecond=0)
+    
+    # Due to a bug in the library we need this line when daylight hours > nighttime hours
+    # abd_ss += datetime.timedelta(days=1)
 
+    
     if now > abd_ss.replace(tzinfo=None) or now < abd_sr.replace(tzinfo=None) :
         logger.info('Sun is down - SunRise {} SunSet {} Time {}'.format(abd_sr.strftime('%d/%m-%H:%M'), abd_ss.strftime('%d/%m-%H:%M'), now.strftime('%d/%m-%H:%M')))
         #logger.info('The sun is down')
