@@ -8,6 +8,7 @@ import smbus2
 import bme280
 
 
+
 #GPIO.setmode(GPIO.BCM)
 #GPIO.setwarnings(False)
 #GPIO.setup(6,GPIO.OUT)
