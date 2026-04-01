@@ -3,6 +3,11 @@ from luma.core.interface.serial import spi
 from luma.core.render import canvas
 from PIL import ImageFont
 
+from astral import LocationInfo
+from astral.sun import sun
+import pytz
+from datetime import datetime
+
 import sys
 import time
 
@@ -31,7 +36,7 @@ if ScreenType == "ili9341":
         serial,
         width=320,
         height=240,
-        rotate=1
+        rotate=0
     )
 elif ScreenType == "st7789":
     print("st7789")
@@ -53,7 +58,7 @@ font = ImageFont.truetype(
 
 font1 = ImageFont.truetype(
     "/home/pi/.local/share/fonts/FUTURAM/16020_FUTURAM.ttf",
-20
+18
 )
 
 font2 = ImageFont.truetype(
@@ -81,15 +86,17 @@ def on_message(client, userdata, msg):
     global LoungeHumidity
     global GWLoungeTemp
     global GWLoungeHumidity
-    global KitchenTemp
-    global KitchenHumidity
+    global DLKitchenTemp
+    global DLKitchenHumidity
+    global DLKitchenPressure
+    global DLKitchenGas
     global GWKitchenTemp
     global GWKitchenHumidity
     global OfficeTemp
     global OfficeHumidity
     global GWOfficeTemp
     global GWOfficeHumidity
-    global SpareBedroomTemp
+    global SpareBedTemp
     global GWSpareBedroomTemp
     global LoftTemp
     global GarageInsideTemp
@@ -103,17 +110,21 @@ def on_message(client, userdata, msg):
     elif msg.topic == "GWTopFloorHumidity":
         GWTopFloorHumidity = "/{:.0f}%".format(float(msg.payload.decode()))
     elif msg.topic == "DLLoungeTemp":
-        LoungeTemp = "{:.1f}C".format(float(msg.payload.decode()))
+        DLLoungeTemp = "{:.1f}C".format(float(msg.payload.decode()))
     elif msg.topic == "DLLoungeHumidity":
-        LoungeHumidity = "/{:.0f}%".format(float(msg.payload.decode()))
+        DLLoungeHumidity = "/{:.0f}%".format(float(msg.payload.decode()))
     elif msg.topic == "GWLoungeTemp":
         GWLoungeTemp = "{:.1f}C".format(float(msg.payload.decode()))
     elif msg.topic == "GWLoungeHumidity":
         GWLoungeHumidity = "/{:.0f}%".format(float(msg.payload.decode()))
-    elif msg.topic == "KitchenTemp":
-        KitchenTemp = "{:.1f}C".format(float(msg.payload.decode()))
-    elif msg.topic == "KitchenHumidity":
-        KitchenHumidity = "/{:.0f}%".format(float(msg.payload.decode()))
+    elif msg.topic == "DLKitchenTemp":
+        DLKitchenTemp = "{:.1f}C".format(float(msg.payload.decode()))
+    elif msg.topic == "DLKitchenHumidity":
+        DLKitchenHumidity = "/{:.0f}%".format(float(msg.payload.decode()))
+    elif msg.topic == "DLKitchenPressure":
+        DLKitchenPressure = "{:.0f}Mpa".format(float(msg.payload.decode()))
+    elif msg.topic == "DLKitchenGas":
+        DLKitchenGas = "{:.0f}Ohm".format(float(msg.payload.decode()))
     elif msg.topic == "GWKitchenTemp":
         GWKitchenTemp = "{:.1f}C".format(float(msg.payload.decode()))
     elif msg.topic == "GWKitchenHumidity":
@@ -126,8 +137,8 @@ def on_message(client, userdata, msg):
         GWOfficeTemp = "{:.1f}C".format(float(msg.payload.decode()))
     elif msg.topic == "GWOfficeHumidity":
         GWOfficeHumidity = "/{:.0f}%".format(float(msg.payload.decode()))
-    elif msg.topic == "SpareBedroomTemp":
-        SpareBedroomTemp = "{:.1f}C".format(float(msg.payload.decode()))
+    elif msg.topic == "SpareBedTemp":
+        SpareBedTemp = "{:.1f}C".format(float(msg.payload.decode()))
     elif msg.topic == "GWSpareBedroomTemp":
         GWSpareBedroomTemp = "{:.1f}C".format(float(msg.payload.decode()))
     elif msg.topic == "LoftTemp":
@@ -135,49 +146,54 @@ def on_message(client, userdata, msg):
     elif msg.topic == "GarageInsideTemp":
         GarageInsideTemp = "{:.1f}C".format(float(msg.payload.decode()))
 
+    timezone="Europe/London"
+    city = LocationInfo(latitude=51.379608, longitude=-0.243710, timezone=timezone)
+    s = sun(city.observer, date=datetime.now(), tzinfo=pytz.timezone(timezone))
+    now = datetime.now(pytz.timezone(timezone))
+    #print(str(now.time))
+    print(" xya" + now.strftime("%Y-%m-%d %H:%M:%S %Z%z"))
+    print(s["sunrise"])
+    print("Sunrise  at %s:%s" % (s["sunrise"].hour, s["sunrise"].minute))
+    print(s["sunset"])
+    print("Sunset  at %s:%s" % (s["sunset"].hour, s["sunset"].minute))
+
+
     with canvas(device) as draw:
-        draw.text((0, 0), time.strftime("%H:%M %a, %d %b", time.gmtime()) , font=font, fill="white")
-        draw.text((0, 40), "Sunrise/set  05:15/20:07" , font=font1, fill="white")
+        draw.text((0, 0), now.strftime("%H:%M %a, %d %b") , font=font, fill="white")
+#        draw.text((0, 0), time.strftime("%H:%M %a, %d %b", time.gmtime()) , font=font, fill="white")
+        draw.text((0, 40), "SunRise:" + str(s["sunrise"].hour) +  ":" + str(s["sunrise"].minute) + "  SunSet:" + str(s["sunset"].hour) + ":" + str(s["sunset"].minute) , font=font1, fill="white")
+        draw.text((0, 60), "            Drumaline Greenway    " , font=font1, fill="white")
 
-        draw.text((0, 60), "                 Drum     Green    " , font=font1, fill="white")
+        draw.text((0,73), "Kitchen" , font=font1, fill="white")
+        draw.text((80,80), DLKitchenTemp + DLKitchenHumidity  , font=font2, fill="white")
+        draw.text((165,80), GWKitchenTemp  + GWKitchenHumidity , font=font2, fill="white")
 
-        draw.text((0, 80), "Pressure" , font=font1, fill="white")
-        draw.text((80, 80), "1080 MPa" , font=font2, fill="white")
-        draw.text((165, 80), "1100 MPa" , font=font2, fill="white")
+        draw.text((0, 93), "K Pres" , font=font1, fill="white")
+        draw.text((80, 100), DLKitchenPressure + "" , font=font2, fill="white")
+        draw.text((165, 100), "" , font=font2, fill="white")
+
+        draw.text((0, 113), "K Gas" , font=font1, fill="white")
+        draw.text((80, 120), DLKitchenGas + "" , font=font2, fill="white")
+        draw.text((165, 120), "" , font=font2, fill="white")
 
 
-        #draw.text((0, 56), "Main Bd" , font=font1, fill="white")
-        #draw.text((80, 60), MainBedTemp + "" + MainBedHumidity , font=font2, fill="white")
-        #draw.text((165, 60), GWTopFloorTemp  + GWTopFloorHumidity , font=font2, fill="white")
 
-        #draw.text((0, 76), "Lounge" , font=font1, fill="white")
-        #draw.text((80, 80), LoungeTemp  + LoungeHumidity , font=font2, fill="white")
-        #draw.text((165, 80), GWLoungeTemp + GWLoungeHumidity , font=font2, fill="white")
-
-        draw.text((0,100), "Kitchen" , font=font1, fill="white")
-        draw.text((80,100), KitchenTemp + KitchenHumidity  , font=font2, fill="white")
-        draw.text((165,100), GWKitchenTemp  + GWKitchenHumidity , font=font2, fill="white")
-
-        draw.text((0,120), "K Air" , font=font1, fill="white")
-        draw.text((80,120), "1023 Good"  , font=font2, fill="white")
-        draw.text((165,120),"1067 Bad" , font=font2, fill="white")
-
-        draw.text((0,140), "Office" , font=font1, fill="white")
+        draw.text((0,133), "Office" , font=font1, fill="white")
         draw.text((80,140), OfficeTemp  + OfficeHumidity , font=font2, fill="white")
         draw.text((165,140), GWOfficeTemp  + GWOfficeHumidity , font=font2, fill="white")
 
-        draw.text((0,160), "Spar Bd" , font=font1, fill="white")
-        draw.text((80,160), SpareBedroomTemp , font=font2, fill="white")
+        draw.text((0,153), "Spar Bd" , font=font1, fill="white")
+        draw.text((80,160), SpareBedTemp , font=font2, fill="white")
         draw.text((165,160), GWSpareBedroomTemp + GWOfficeHumidity , font=font2, fill="white")
 
-        draw.text((0,180), "Loft" , font=font1, fill="white")
-        draw.text((90,180), LoftTemp , font=font2, fill="white")
+        draw.text((0,173), "Loft" , font=font1, fill="white")
+        draw.text((80,180), LoftTemp , font=font2, fill="white")
 
-        draw.text((0,200), "Garage" , font=font1, fill="white")
-        draw.text((90,200), GarageInsideTemp , font=font2, fill="white")
+        draw.text((0,193), "Garage" , font=font1, fill="white")
+        draw.text((80,200), GarageInsideTemp , font=font2, fill="white")
 
 
-        draw.text((0, 240), msg.topic + " " + msg.payload.decode() , font=font2, fill="white")
+        draw.text((0, 300), msg.topic + " " + msg.payload.decode() , font=font2, fill="white")
 
 
 client = mqtt.Client()
@@ -198,15 +214,18 @@ LoungeTemp = ""
 LoungeHumidity = ""
 GWLoungeTemp = ""
 GWLoungeHumidity = ""
-KitchenTemp = ""
-KitchenHumidity = ""
+DLKitchenTemp = ""
+DLKitchenHumidity = ""
+DLKitchenPressure = ""
+DLKitchenGas = ""
+
 GWKitchenTemp = ""
 GWKitchenHumidity = ""
 OfficeTemp = ""
 OfficeHumidity = ""
 GWOfficeTemp = ""
 GWOfficeHumidity = ""
-SpareBedroomTemp = ""
+SpareBedTemp = ""
 GWSpareBedroomTemp = ""
 LoftTemp = ""
 GarageInsideTemp = ""
